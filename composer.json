@@ -1,5 +1,5 @@
 {
-  "name":             "mastertang/Lottery",
+  "name":             "mastertang/lottery",
   "keywords":         ["Lottery", "lottery", "luckdraw" ,"PHP" ,"php" ,"prize"],
   "time":             "2017-2-20",
   "autoload":{
