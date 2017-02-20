@@ -1,0 +1,10 @@
+{
+  "name":             "mastertang/Lottery",
+  "keywords":         ["Lottery", "lottery", "luckdraw" ,"PHP" ,"php" ,"prize"],
+  "time":             "2017-2-20",
+  "autoload":{
+    "psr-4":{
+      "LuckyDraw\\":"./"
+    }
+  }
+}
