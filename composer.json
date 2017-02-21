@@ -1,5 +1,6 @@
 {
   "name":             "mastertang/lottery",
+  "description": "Function lottery function block",
   "keywords":         ["Lottery", "lottery", "luckdraw" ,"PHP" ,"php" ,"prize"],
   "time":             "2017-2-20",
   "license" : "MIT",
@@ -8,4 +9,7 @@
       "LuckyDraw\\":"./"
     }
   }
+  "require": {
+        "php": ">=5.3.0"
+   },
 }
