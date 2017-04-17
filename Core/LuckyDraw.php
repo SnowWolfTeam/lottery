@@ -12,48 +12,37 @@ class LuckyDraw
     private $pdo = NULL;//pdo设置信息
     private $sqlArr = NULL;//数据库信息
     private $pdoInstance = NULL;//pdo实例
-    private $exceptionMssage = '';//错误异常消息
-    private $exceptionCode = 0;//错误异常码
 
     public function run($lottery)
     {
-        try {
-            if (!empty($lottery)) {
-                $funcList = $lottery['func'];
-                $this->pdo = $lottery['pdo'];
-                $this->sqlArr = $lottery['sql'];
-                unset($lottery['pdo']);
-                unset($lottery['func']);
-                unset($lottery['sql']);
-                $level = 0;
-                !$funcList['CPAD'] or $this->checkProjectActivityDate($lottery['activityDate']);
-                !$funcList['CTPR'] or $this->checkTimesPermitRegion($lottery['timesRegion']);
-                !$funcList['EOP'] or $this->everyOnePrize();
-                $this->lottery($lottery['preSection']);
-                !$funcList['CTGPL'] or $this->checkTimeGetPrizesLimit($lottery['prizeDateLimit']);
-                !$funcList['CPC'] or $this->checkPrizeCount($lottery['prizeCount']);
-                !$funcList['CUCP'] or $this->getCycle($lottery['activityDate'][0], $lottery['repeatData'][$this->level - 1]);
-                !$funcList['CUCP'] or $this->checkUserCanPrize($this->cycle, $lottery['userCanPrize']);
-                if ($this->level >= 1)
-                    $level = $this->level;
-                else
-                    $level = !isset($lottery['sparePrizeId']) ? $lottery['sparePrizeId'] : false;
-                unset($this->pdoInstance);
-                return $level;
-            } else
-                throw new LuckyDrawException('抽奖输入参数不能为空', LuckyDrawException::PARAMS_NULL);
-        } catch (\ErrorException $e) {
-            $this->exceptionMssage = $e->getMessage();
-            $this->exceptionCode = $e->getCode();
-            return false;
-        }
+        if (!empty($lottery)) {
+            $funcList = $lottery['func'];
+            $this->pdo = $lottery['pdo'];
+            $this->sqlArr = $lottery['sql'];
+            unset($lottery['pdo']);
+            unset($lottery['func']);
+            unset($lottery['sql']);
+            $level = 0;
+            !$funcList['CPAD'] or $this->checkProjectActivityDate($lottery['activityDate']);
+            !$funcList['CTPR'] or $this->checkTimesPermitRegion($lottery['timesRegion']);
+            !$funcList['EOP'] or $this->everyOnePrize();
+            $this->lottery($lottery['preSection']);
+            !$funcList['CTGPL'] or $this->checkTimeGetPrizesLimit($lottery['prizeDateLimit']);
+            !$funcList['CPC'] or $this->checkPrizeCount($lottery['prizeCount']);
+            !$funcList['CUCP'] or $this->getCycle($lottery['activityDate'][0], $lottery['repeatData'][$this->level - 1]);
+            !$funcList['CUCP'] or $this->checkUserCanPrize($this->cycle, $lottery['userCanPrize']);
+            if ($this->level >= 1)
+                $level = $this->level;
+            else
+                $level = !isset($lottery['sparePrizeId']) ? $lottery['sparePrizeId'] : false;
+            unset($this->pdoInstance);
+            return $level;
+        } else
+            throw new LuckyDrawException('抽奖输入参数不能为空', LuckyDrawException::PARAMS_NULL);
     }
 
     /**
      * 检查活动日期限制
-     * @param $dateRegion
-     * @return bool
-     * @throws LuckyDrawException
      */
     private function checkProjectActivityDate($dateRegion)
     {
@@ -70,9 +59,6 @@ class LuckyDraw
 
     /**
      * 检查是否在可抽奖时间段
-     * @param $timesRegion
-     * @return bool
-     * @throws LuckyDrawException
      */
     private function checkTimesPermitRegion($timesRegion)
     {
@@ -108,8 +94,6 @@ class LuckyDraw
 
     /**
      * 进行抽奖
-     * @param $preSection
-     * @throws LuckyDrawException
      */
     public function lottery($preSection)
     {
@@ -138,9 +122,6 @@ class LuckyDraw
 
     /**
      * 创建概率区间
-     * @param $pre
-     * @param $preSum
-     * @return array
      */
     private function makePreSection($pre, &$preSum)
     {
@@ -158,8 +139,6 @@ class LuckyDraw
 
     /**
      * 检查是否需要现在奖品数，检查是否需要刷新奖品周期
-     * @param $prizeCount
-     * @throws LuckyDrawException
      */
     public function checkPrizeCount($prizeCount)
     {
@@ -176,9 +155,6 @@ class LuckyDraw
 
     /**
      * 检查所中奖项是否已超过当天额度
-     * @param $prizeLimitArray
-     * @return bool
-     * @throws LuckyDrawException
      */
     public function checkTimeGetPrizesLimit($prizeLimitArray)
     {
@@ -220,9 +196,6 @@ class LuckyDraw
 
     /**
      * 检查是否超过自己再中奖的条件
-     * @param $cycle
-     * @param $userCanPrize
-     * @throws LuckyDrawException
      */
     public function checkUserCanPrize($cycle, $userCanPrize)
     {
@@ -250,9 +223,6 @@ class LuckyDraw
 
     /**
      * 获取周期
-     * @param $beginDate    项目开始时间
-     * @param $repeatData   中奖次数刷新时间
-     * @return int  返回周期,（ 为当前时间 - 开始时间 ）/ 刷新周期时间
      */
     private function getCycle($beginDate, $repeatData)
     {
@@ -264,9 +234,6 @@ class LuckyDraw
 
     /**
      * 查数据的个数
-     * @param $sqlString
-     * @return int|null
-     * @throws \Exception
      */
     private function sqlCount($sqlString)
     {
