@@ -20,7 +20,7 @@ return [
     'prize_count_event' => function ($level) {
 
     },
-    'time_get_prizes_limit_event' => function ($level) {
+    'date_get_prizes_limit_event' => function ($level) {
 
     },
     'user_can_prize_event' => function ($level, $cycle) {

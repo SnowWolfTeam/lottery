@@ -81,10 +81,10 @@ class LuckyDraw
                 $this->config['prize_count_event']
             );
         }
-        if (isset($this->config['time_get_prizes_limit_event'])) {
+        if (isset($this->config['date_get_prizes_limit_event'])) {
             $this->eventInstance->setEvents(
-                'time_get_prizes_limit_event',
-                $this->config['time_get_prizes_limit_event']
+                'date_get_prizes_limit_event',
+                $this->config['date_get_prizes_limit_event']
             );
         }
         if (isset($this->config['user_can_prize_event'])) {
@@ -281,8 +281,8 @@ class LuckyDraw
                 }
                 if ($limitCount === -1)
                     $this->status = self::DATE_PRIZES_LIMIT;
-                if ($this->eventInstance->exist('time_get_prizes_limit_event')) {
-                    $count = $this->eventInstance->run('time_get_prizes_limit_event', [$this->level]);
+                if ($this->eventInstance->exist('date_get_prizes_limit_event')) {
+                    $count = $this->eventInstance->run('date_get_prizes_limit_event', [$this->level]);
                     if (is_int($count) && $count >= 0) {
                         if ($count >= $limitCount)
                             $this->status = self::DATE_PRIZES_LIMIT;

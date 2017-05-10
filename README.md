@@ -33,7 +33,7 @@
          'prize_count_event' => function ($level) {
             //检查所中的奖是否已经全部被中完，进行数据库查询，返回int数量值，$level即奖品等级
          },
-         'time_get_prizes_limit_event' => function ($level) {
+         'date_get_prizes_limit_event' => function ($level) {
             //检查每天可送出奖品是否到达最大值,进行数据库查询,返回int数量值，$level即奖品等级
          },
          'user_can_prize_event' => function ($level, $cycle) {
@@ -54,9 +54,10 @@
 ```   
   $timesRegion = 可选,每天允许抽奖的时间段
 ```
-###### 4. everyOnePrizeCount($limit = -1) 判断个人中奖数是否到达设定值
+###### 4. everyOnePrizeCount($limit = -1,$params=[]) 判断个人中奖数是否到达设定值
 ```   
   $limit = 可选,可以输入配置数组或配置路径，默认使用包内配置文件
+  $params = 可选,调用事件方法时输入的参数
 ```
 ###### 5. lottery($preSection = []) 开始抽奖(必须)
 ```   
