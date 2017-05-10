@@ -50,6 +50,7 @@ class Events
             foreach ($oldParams as $subParams) {
                 array_unshift($newParams, $subParams);
             }
+            //var_dump($newParams);
             return call_user_func_array($data['value'], $newParams);
         } else {
             return false;

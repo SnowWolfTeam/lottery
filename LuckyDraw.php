@@ -46,7 +46,7 @@ class LuckyDraw
      */
     public function __construct($config = [])
     {
-        if (is_array($config)) {
+        if (is_array($config) && !empty($config)) {
             $this->config = $config;
         } elseif (is_string($config) && !empty($config) && is_file($config)) {
             $data = include $config;
@@ -100,7 +100,7 @@ class LuckyDraw
      */
     public function activityDate($dateRegion = [])
     {
-        if ($this->status !== -1) {
+        if ($this->status == -1) {
             $date = $this->config['activity_date'];
             $date = empty($dateRegion) ? (empty($date) ? [] : $date) : $dateRegion;
             if (empty($date))
@@ -145,13 +145,13 @@ class LuckyDraw
     /**
      * Whether the user's toatl numbers of prize reach the maximum limit.
      */
-    public function everyOnePrizeCount($limit = -1)
+    public function everyOnePrizeCount($limit = -1, $params = [])
     {
         if ($this->status == -1) {
-            if ($this->eventInstance->exist('every_one_prize')) {
+            if ($this->eventInstance->exist('every_one_prize_event')) {
                 if ($limit == -1) $limit = $this->config['every_prize_count'];
                 if (is_int($limit) && $limit >= 0) {
-                    $count = $this->eventInstance->every_one_prize_event;
+                    $count = $this->eventInstance->run('every_one_prize_event', $params);
                     if (is_int($count) && $count >= 0) {
                         if ($count >= $limit)
                             $this->status = self::PRIZE_TOTAL_LIMIT_REACH;
@@ -171,7 +171,7 @@ class LuckyDraw
      */
     public function lottery($preSection = [])
     {
-        if ($this->status != -1) {
+        if ($this->status == -1) {
             $pre = $this->config['pre_section'];
             $pre = empty($preSection) ? (empty($pre) ? [] : $pre) : $preSection;
             if (empty($pre))
@@ -197,6 +197,7 @@ class LuckyDraw
                     $this->status = self::TOTAL_PRE_ERROR;
             }
         }
+        return $this;
     }
 
     /**
