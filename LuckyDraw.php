@@ -100,7 +100,7 @@ class LuckyDraw
      */
     public function activityDate($dateRegion = [])
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $date = $this->config['activity_date'];
             $date = empty($dateRegion) ? (empty($date) ? [] : $date) : $dateRegion;
             if (empty($date))
@@ -119,13 +119,13 @@ class LuckyDraw
      */
     public function timesPermitRegion($timesRegion = [])
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $region = $this->config['times_region'];
             $region = empty($timesRegion) ? (empty($region) ? [] : $region) : $timesRegion;
             if (!empty($region)) {
-                $result = true;
+                $result = false;
                 $nowTimeStamp = $_SERVER['REQUEST_TIME'];
-                $ymd = date('Y-m-d', $_SERVER['REQUEST_TIME']);
+                $ymd = date('Y-m-d ', $_SERVER['REQUEST_TIME']);
                 foreach ($region as $values) {
                     if ($nowTimeStamp > strtotime($ymd . $values[0])
                         && $nowTimeStamp < strtotime($ymd . $values[1])
@@ -147,7 +147,7 @@ class LuckyDraw
      */
     public function everyOnePrizeCount($limit = -1, $params = [])
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             if ($this->eventInstance->exist('every_one_prize_event')) {
                 if ($limit == -1) $limit = $this->config['every_prize_count'];
                 if (is_int($limit) && $limit >= 0) {
@@ -169,9 +169,9 @@ class LuckyDraw
     /**
      * To draw.
      */
-    public function lottery($preSection = [])
+    private function lottery()
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $pre = $this->config['pre_section'];
             $pre = empty($preSection) ? (empty($pre) ? [] : $pre) : $preSection;
             if (empty($pre))
@@ -222,12 +222,15 @@ class LuckyDraw
      */
     public function prizeCount($prizeCount = [])
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $prizes = $this->config['prize_count'];
             $prizes = empty($prizeCount) ? (empty($prizes) ? [] : $prizes) : $prizeCount;
             if (empty($prizes)) {
                 $this->status = self::PARAMS_NULL;
             } else {
+                if($this->level == -1){
+                    $this->lottery();
+                }
                 if ($this->eventInstance->exist('prize_count_event')) {
                     $levelCount = $this->eventInstance->run('prize_count_event', [$this->level]);
                     if (is_int($levelCount) && $levelCount >= 0) {
@@ -248,12 +251,15 @@ class LuckyDraw
      */
     public function dateGetPrizesLimit($prizeLimit = [])
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $prizeDateLimit = $this->config['prize_date_limit'];
             $prizeDateLimit = empty($prizeLimit) ? (empty($prizeDateLimit) ? [] : $prizeDateLimit) : $prizeLimit;
             if (empty($prizeDateLimit))
                 $this->status = self::PARAMS_NULL;
             else {
+                if($this->level == -1){
+                    $this->lottery();
+                }
                 $limitCount = -1;
                 $requireTime = $_SERVER['REQUEST_TIME'];
                 $dateString = date('Y-m-d', $requireTime);
@@ -301,7 +307,7 @@ class LuckyDraw
      */
     public function userCanPrize($userCanPrize = [], $beginDate = '', $repeatDate = '')
     {
-        if ($this->status == -1) {
+        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
             $userPrize = $this->config['user_can_prize'];
             $userPrize = empty($userCanPrize) ? (empty($userPrize) ? [] : $userPrize) : $userCanPrize;
             $begin = $this->config['activity_date'][0];
@@ -312,6 +318,9 @@ class LuckyDraw
                 $this->status = self::PARAMS_NULL;
             else {
                 if ($this->eventInstance->exist('user_can_prize_event')) {
+                    if($this->level == -1){
+                        $this->lottery();
+                    }
                     $count = 0;
                     $limit = $userPrize[$this->level - 1];
                     $cycle = $this->getCycle($begin, $repeat);

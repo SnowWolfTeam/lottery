@@ -47,11 +47,10 @@ class Events
             if (!is_array($newParams)) $newParams = [$newParams];
             $data = $this->eventPool[$key];
             $oldParams = $data['params'];
-            foreach ($oldParams as $subParams) {
-                array_unshift($newParams, $subParams);
+            foreach ($newParams as $subParams) {
+                $oldParams[] = $subParams;
             }
-            //var_dump($newParams);
-            return call_user_func_array($data['value'], $newParams);
+            return call_user_func_array($data['value'], $oldParams);
         } else {
             return false;
         }
