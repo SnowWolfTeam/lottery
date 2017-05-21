@@ -60,6 +60,9 @@ class LuckyDraw
                     $this->config = $data;
             }
         }
+        if(!isset($this->config['shared_prize'])){
+            $this->config['shared_prize'] = -100;
+        }
         $this->eventInstance = new Events();
         $this->eventRegister();
     }
