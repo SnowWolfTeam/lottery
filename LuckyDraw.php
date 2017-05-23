@@ -10,11 +10,12 @@ class LuckyDraw
     const NOT_LOTTERY_TIME_REGION = 0x1002;
     const PRIZE_TOTAL_LIMIT_REACH = 0x1003;
     const TOTAL_PRE_ERROR = 0x1004;
-    const THIS_PRIZE_OUT = 0x1005;
-    const DATE_PRIZES_LIMIT = 0x1006;
-    const USER_CAN_NOT_PRIZE_NOW = 0x1007;
-    const EVENT_NOT_EXIST = 0x1008;
-    const EVENT_RETURN_ERROR = 0x1009;
+    const PRIZE_ALL_OUT = 0x1005;
+    const THIS_PRIZE_OUT = 0x1006;
+    const DATE_PRIZES_LIMIT = 0x1007;
+    const USER_CAN_NOT_PRIZE_NOW = 0x1008;
+    const EVENT_NOT_EXIST = 0x1009;
+    const EVENT_RETURN_ERROR = 0x1010;
 
     /**
      * Lottery prize's level.
@@ -60,7 +61,7 @@ class LuckyDraw
                     $this->config = $data;
             }
         }
-        if(!isset($this->config['shared_prize'])){
+        if (!isset($this->config['shared_prize'])) {
             $this->config['shared_prize'] = -100;
         }
         $this->eventInstance = new Events();
@@ -72,6 +73,12 @@ class LuckyDraw
      */
     private function eventRegister()
     {
+        if (isset($this->config['definite_get_prize_event'])) {
+            $this->eventInstance->setEvents(
+                'definite_get_prize_event',
+                $this->config['definite_get_prize_event']
+            );
+        }
         if (isset($this->config['every_one_prize_event'])) {
             $this->eventInstance->setEvents(
                 'every_one_prize_event',
@@ -231,7 +238,7 @@ class LuckyDraw
             if (empty($prizes)) {
                 $this->status = self::PARAMS_NULL;
             } else {
-                if($this->level == -1){
+                if ($this->level == -1) {
                     $this->lottery();
                 }
                 if ($this->eventInstance->exist('prize_count_event')) {
@@ -260,7 +267,7 @@ class LuckyDraw
             if (empty($prizeDateLimit))
                 $this->status = self::PARAMS_NULL;
             else {
-                if($this->level == -1){
+                if ($this->level == -1) {
                     $this->lottery();
                 }
                 $limitCount = -1;
@@ -321,7 +328,7 @@ class LuckyDraw
                 $this->status = self::PARAMS_NULL;
             else {
                 if ($this->eventInstance->exist('user_can_prize_event')) {
-                    if($this->level == -1){
+                    if ($this->level == -1) {
                         $this->lottery();
                     }
                     $count = 0;
@@ -337,6 +344,7 @@ class LuckyDraw
                     $this->status = self::EVENT_NOT_EXIST;
             }
         }
+        return $this;
     }
 
     /**
@@ -348,5 +356,51 @@ class LuckyDraw
         $second = time() - $beginStamp;
         $cycle = (int)((int)($second / 3600) / $repeatData) + 1;
         return $cycle;
+    }
+
+    /**
+     * Make sure user can get a prize.If all prize out,then user get nothing.
+     */
+    public function definiteGetPrize($order = 'desc')
+    {
+        if ($this->status == -1) {
+            if (isset($this->config['definite_get_prize']) &&
+                isset($this->config['prize_number']) &&
+                $this->eventInstance->exist('definite_get_prize_event')
+            ) {
+                $config = $this->config['definite_get_prize'];
+                if (isset($config['order']) && ($config['order'] == 'desc' || $config['order'] == 'asc'))
+                    $order = $config['order'];
+                $size = $this->config['prize_number'];
+                $funcResult = false;
+                if ($order == 'asc') {
+                    for ($i = 1; $i <= $size; $i++) {
+                        $result = $this->eventInstance->run('definite_get_prize_event', [$i]);
+                        if ($result) {
+                            $this->level = $i;
+                            $this->status = -1;
+                            $funcResult = true;
+                            break;
+                        }
+                    }
+                } elseif ($order == 'desc') {
+                    for ($i = $size; $i >= 1; $i--) {
+                        $result = $this->eventInstance->run('definite_get_prize_event', [$i]);
+                        if ($result) {
+                            $this->level = $i;
+                            $this->status = -1;
+                            $funcResult = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$funcResult) {
+                    $this->status = self::PRIZE_ALL_OUT;
+                }
+            } else {
+                $this->status = self::PARAMS_NULL;
+            }
+        }
+        return $this;
     }
 }

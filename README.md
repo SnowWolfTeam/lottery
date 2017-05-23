@@ -18,6 +18,9 @@
                   //每个奖品当前用户可抽的次数，开启CUCP功能必须设置
         'every_prize_count' => 1,
                   //每个用户能中的奖的总数
+        'definite_get_prize' => [
+            'order' => 'desc'
+        ],        //设置用户一定中奖，order指示程序筛选奖品等级的顺序             
         'prize_date_limit' => [
             'type'=>1或2,
             'data'=>[ 
@@ -27,6 +30,10 @@
             //每天每个奖品可送出奖品列表，开启CTGPL功能必须开启
             //type=1,表示检查每天可送出奖品数，data的key值为2017-1-17：type=2,表示检查每天时间段可送出奖品数，key值变为'2017-01-17 08:10:11|2017-01-17 12:00:25'
         ],
+        'definite_get_prize_event' => function ($level) {
+            return true;
+            //如果$level可以中，就返回true，否则返回false
+         },
          'every_one_prize_event' => function () {
             //检查用户所中的奖的数量是否达到设定的最大值,这里返回数据库查询的匿名函数，需返回int数量值,或true(达到)|false
          },
@@ -76,6 +83,10 @@
   $userCanPrize = 可选,
   $beginDate = 可选,项目开始日期:'2017-02-22 10:10:10'
   $repeatDate = 可选,刷新时间:1800(单位小时) 
+```
+###### 9. definiteGetPrize($order = 'desc') 用户一定中奖，但是如果所有奖品都送完或其他就不中奖
+```   
+  $order = 可选,desc表示从最后等级奖品开始筛选,asc则相反,例有奖品:1,2 ；desc就先从2->1的顺序,asc就先从1->2的顺序
 ```
 ### 附录
 * 执行状态

@@ -7,7 +7,11 @@ return [
     'repeat_data' => [1800, 1800, 1800, 1800, 1800],
     'user_can_prize' => [1, 1, 1, 1, 1],
     'every_prize_count' => 1,
+    'definite_get_prize' => [
+        'order' => 'desc'
+    ],
     'shared_pirze' => 5,
+    'prize_number' => 10,
     'prize_date_limit' => [
         'type' => 1,
         'data' => [
@@ -15,6 +19,9 @@ return [
             '2017-01-18' => [20, 40, 60, 80, 100]
         ]
     ],
+    'definite_get_prize_event' => function ($level) {
+        return true;
+    },
     'every_one_prize_event' => function ($abc) {
         return 2;
     },
