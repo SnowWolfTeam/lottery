@@ -1,22 +1,13 @@
 <?php
 namespace LuckyDraw;
 
+use LuckyDraw\Config\LotteryConfig;
 use LuckyDraw\Events\Events;
+use LuckyDraw\Exception\LotteryException;
+use LuckyDraw\Status\Status;
 
 class LuckyDraw
 {
-    const PARAMS_NULL = 0x1000;
-    const ACTIVITY_OUT = 0x1001;
-    const NOT_LOTTERY_TIME_REGION = 0x1002;
-    const PRIZE_TOTAL_LIMIT_REACH = 0x1003;
-    const TOTAL_PRE_ERROR = 0x1004;
-    const PRIZE_ALL_OUT = 0x1005;
-    const THIS_PRIZE_OUT = 0x1006;
-    const DATE_PRIZES_LIMIT = 0x1007;
-    const USER_CAN_NOT_PRIZE_NOW = 0x1008;
-    const EVENT_NOT_EXIST = 0x1009;
-    const EVENT_RETURN_ERROR = 0x1010;
-
     /**
      * Lottery prize's level.
      */
@@ -30,79 +21,53 @@ class LuckyDraw
     /**
      * Event class instance.
      */
-    private $eventInstance = NULL;
-
-    /**
-     * Lottery config data.
-     */
-    private $config = [];
-
-    /**
-     * Lottery function  execute result.
-     */
-    public $status = -1;
+    private $event = NULL;
 
     /**
      * LuckyDraw constructor.
      */
-    public function __construct($config = [])
+    public function __construct($event = [])
     {
-        if (is_array($config) && !empty($config)) {
-            $this->config = $config;
-        } elseif (is_string($config) && !empty($config) && is_file($config)) {
-            $data = include $config;
-            if (is_array($data) && !empty($data))
-                $this->config = $data;
-        } else {
-            $configPath = __DIR__ . '/Config/Config.php';
-            if (is_file($configPath)) {
-                $data = include $configPath;
-                if (is_array($data) && !empty($data))
-                    $this->config = $data;
-            }
-        }
-        if (!isset($this->config['shared_prize'])) {
-            $this->config['shared_prize'] = -100;
-        }
-        $this->eventInstance = new Events();
-        $this->eventRegister();
+        $this->event = new Events();
+        $this->eventInitialization($event);
     }
 
     /**
      * Register events from the config data.
      */
-    private function eventRegister()
+    private function eventInitialization($event = [])
     {
-        if (isset($this->config['definite_get_prize_event'])) {
-            $this->eventInstance->setEvents(
-                'definite_get_prize_event',
-                $this->config['definite_get_prize_event']
-            );
+        if (empty($event)) {
+            $event = LotteryConfig::eventCreate();
         }
-        if (isset($this->config['every_one_prize_event'])) {
-            $this->eventInstance->setEvents(
-                'every_one_prize_event',
-                $this->config['every_one_prize_event']
-            );
+        if (!empty($event)) {
+            if (isset($event['definite_prize'])) {
+                $this->event->setEvents('definite_prize', $event['definite_prize']);
+            }
+            if (isset($event['total_limit'])) {
+                $this->event->setEvents('total_limit', $event['total_limit']);
+            }
+            if (isset($event['count_prize'])) {
+                $this->event->setEvents('count_prize', $event['prize_count']);
+            }
+            if (isset($event['date_limit'])) {
+                $this->event->setEvents('date_limit', $event['date_limit']);
+            }
+            if (isset($event['user_limit'])) {
+                $this->event->setEvents('user_limit', $event['user_limit']);
+            }
+            foreach ($event as $key => $value) {
+                $this->event->setEvents($key, $value);
+            }
         }
-        if (isset($this->config['prize_count_event'])) {
-            $this->eventInstance->setEvents(
-                'prize_count_event',
-                $this->config['prize_count_event']
-            );
-        }
-        if (isset($this->config['date_get_prizes_limit_event'])) {
-            $this->eventInstance->setEvents(
-                'date_get_prizes_limit_event',
-                $this->config['date_get_prizes_limit_event']
-            );
-        }
-        if (isset($this->config['user_can_prize_event'])) {
-            $this->eventInstance->setEvents(
-                'user_can_prize_event',
-                $this->config['user_can_prize_event']
-            );
-        }
+    }
+
+    /**
+     * Register user's event.
+     */
+    public function eventRegister($eventName, $event)
+    {
+        $this->event->setEvents($eventName, $event);
     }
 
     /**
@@ -110,15 +75,27 @@ class LuckyDraw
      */
     public function activityDate($dateRegion = [])
     {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $date = $this->config['activity_date'];
-            $date = empty($dateRegion) ? (empty($date) ? [] : $date) : $dateRegion;
-            if (empty($date))
-                $this->status = self::PARAMS_NULL;
-            else {
-                $nowTime = $_SERVER['REQUEST_TIME'];
-                if ($nowTime < strtotime($date[0]) || $nowTime > strtotime($date[1]))
-                    $this->status = self::ACTIVITY_OUT;
+        !empty($dateRegion) or $dateRegion = LotteryConfig::$ActivityDate;
+        $this->paramsThrow(empty($dateRegion), 'activityDate()');
+        $nowTime = $_SERVER['REQUEST_TIME'];
+        if (!is_array($dateRegion[0])) {
+            if ($nowTime < strtotime($dateRegion[0]) ||
+                $nowTime > strtotime($dateRegion[1])
+            ) {
+                throw new LotteryException("活动结束", Status::ACTIVITY_END);
+            }
+        } else {
+            $exist = false;
+            foreach ($dateRegion as $dates) {
+                if ($nowTime < strtotime($dates[0]) ||
+                    $nowTime > strtotime($dates[1])
+                ) {
+                    $exist = true;
+                    break;
+                }
+            }
+            if (!$exist) {
+                throw new LotteryException("活动结束", Status::ACTIVITY_END);
             }
         }
         return $this;
@@ -127,27 +104,23 @@ class LuckyDraw
     /**
      * Whether user can get a prize in a set of time period or not.
      */
-    public function timesPermitRegion($timesRegion = [])
+    public function timeRegionLimit($timesRegion = [])
     {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $region = $this->config['times_region'];
-            $region = empty($timesRegion) ? (empty($region) ? [] : $region) : $timesRegion;
-            if (!empty($region)) {
-                $result = false;
-                $nowTimeStamp = $_SERVER['REQUEST_TIME'];
-                $ymd = date('Y-m-d ', $_SERVER['REQUEST_TIME']);
-                foreach ($region as $values) {
-                    if ($nowTimeStamp > strtotime($ymd . $values[0])
-                        && $nowTimeStamp < strtotime($ymd . $values[1])
-                    ) {
-                        $result = true;
-                        break;
-                    }
-                }
-                if (!$result)
-                    $this->status = self::NOT_LOTTERY_TIME_REGION;
-            } else
-                $this->status = self::PARAMS_NULL;
+        !empty($timesRegion) or $timesRegion = LotteryConfig::$TimesRegion;
+        $this->paramsThrow(empty($timesRegion), 'timeRegionLimit()');
+        $result = false;
+        $nowTimeStamp = $_SERVER['REQUEST_TIME'];
+        $ymd = date('Y-m-d ', $_SERVER['REQUEST_TIME']);
+        foreach ($timesRegion as $values) {
+            if ($nowTimeStamp > strtotime($ymd . $values[0])
+                && $nowTimeStamp < strtotime($ymd . $values[1])
+            ) {
+                $result = true;
+                break;
+            }
+        }
+        if (!$result) {
+            throw new LotteryException("不在可抽奖的时间段内", Status::NOT_LOTTERY_TIME_REGION);
         }
         return $this;
     }
@@ -155,23 +128,15 @@ class LuckyDraw
     /**
      * Whether the user's toatl numbers of prize reach the maximum limit.
      */
-    public function everyOnePrizeCount($limit = -1, $params = [])
+    public function userPrizeCount($limit = -1, $eventName = '', $params = [])
     {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            if ($this->eventInstance->exist('every_one_prize_event')) {
-                if ($limit == -1) $limit = $this->config['every_prize_count'];
-                if (is_int($limit) && $limit >= 0) {
-                    $count = $this->eventInstance->run('every_one_prize_event', $params);
-                    if (is_int($count) && $count >= 0) {
-                        if ($count >= $limit)
-                            $this->status = self::PRIZE_TOTAL_LIMIT_REACH;
-                    } else
-                        $this->status = self::EVENT_RETURN_ERROR;
-                } else
-                    $this->status = self::PARAMS_NULL;
-
-            } else
-                $this->status = self::EVENT_NOT_EXIST;
+        !empty($eventName) or $eventName = 'total_limit';
+        $this->eventThrow($eventName);
+        ($limit != -1) or $limit = LotteryConfig::$EveryPrizeCount;
+        $this->paramsThrow((!is_int($limit) || $limit < 0), 'userPrizeCount');
+        $count = $this->event->run($eventName, (is_array($params) ? $params : [$params]));
+        if ($count >= $limit) {
+            throw new LotteryException("用户中奖数量已达到限制值", Status::USER_TOTAL_LIMIT_REACH);
         }
         return $this;
     }
@@ -179,33 +144,142 @@ class LuckyDraw
     /**
      * To draw.
      */
-    private function lottery()
+    private function lottery($preSection = [])
     {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $pre = $this->config['pre_section'];
-            $pre = empty($preSection) ? (empty($pre) ? [] : $pre) : $preSection;
-            if (empty($pre))
-                $this->status = self::PARAMS_NULL;
-            else {
-                $pre = $this->makePreSection($pre, $preSum);
-                if (is_int($preSum) && $preSum >= 1) {
-                    $randNum = rand(1, $preSum);
-                    $i = 1;
-                    $prizeLevel = 0;
-                    foreach ($pre as $subPre) {
-                        if (($randNum == $subPre[0])
-                            || ($randNum == $subPre[1])
-                            || ($randNum > $subPre[0] && $randNum < $subPre[1])
-                        ) {
-                            $prizeLevel = $i;
-                            break;
-                        }
-                        $i++;
-                    }
-                    $this->level = $prizeLevel;
-                } else
-                    $this->status = self::TOTAL_PRE_ERROR;
+        !empty($preSection) or $preSection = LotteryConfig::$PreSection;
+        $preSection = $this->makePreSection($preSection, $preSum);
+        $this->paramsThrow(empty($preSection) || (!is_int($preSum) || $preSum <= 1), 'lottery()');
+        $randNum = rand(1, $preSum);
+        $index = 1;
+        foreach ($preSection as $subPre) {
+            if ($randNum >= $subPre[0] && $randNum <= $subPre[1]) {
+                $this->level = $index;
+                break;
             }
+            $index++;
+        }
+        return $this;
+    }
+
+    /**
+     * Get the prize's number which has been drawed.
+     */
+    public function prizeCount($prizeCount = [], $eventName = '', $params = [])
+    {
+        !empty($eventName) or $eventName = 'count_prize';
+        $this->eventThrow($eventName);
+        !empty($prizeCount) or $prizeCount = LotteryConfig::$PrizeCount;
+        $this->paramsThrow(empty($prizeCount), 'prizeCount()');
+        ($this->level != -1) or $this->lottery();
+        if (!empty($params)) {
+            if (!is_array($params)) {
+                $params = [$params];
+            }
+            array_unshift($params, $this->level);
+        }
+        $levelCount = $this->event->run($eventName, $params);
+        if ($prizeCount[$this->level - 1] <= $levelCount) {
+            throw new LotteryException("此等奖已经全部送出", Status::THIS_PRIZE_OUT);
+        }
+        return $this;
+    }
+
+    /**
+     * Whether the prize's limit of today has been reached.
+     */
+    public function datePrizesLimit($prizeLimit = [], $eventName = '', $params = [])
+    {
+        !empty($eventName) or $eventName = 'date_limit';
+        $this->eventThrow($eventName);
+        !empty($prizeLimit) or $prizeLimit = LotteryConfig::$PrizeDateLimit;
+        $this->paramsThrow(empty($prizeLimit), 'datePrizesLimit');
+        ($this->level != -1) or $this->lottery();
+        $limitCount = -1;
+        $requireTime = $_SERVER['REQUEST_TIME'];
+        $dateString = date('Y-m-d', $requireTime);
+        if ($prizeLimit['type'] == 1) {
+            $limitCount = $prizeLimit['data'][$dateString][$this->level - 1];
+        } else {
+            $data = $prizeLimit['data'];
+            foreach ($data as $key => $values) {
+                $region = explode('|', $key);
+                $begin = strtotime($region[0]);
+                $end = strtotime($region[1]);
+                if (sizeof($region) < 2 || $begin === false ||
+                    $end === false || date('Y-m-d', $begin) != $dateString
+                ) {
+                    continue;
+                }
+                if ($requireTime >= $begin && $requireTime <= $end) {
+                    $limitCount = $data[$this->level - 1];
+                    break;
+                }
+            }
+        }
+        if ($limitCount === -1) {
+            throw new LotteryException("当前奖品送出已达上限", Status::DATE_PRIZES_LIMIT);
+        }
+        if (!empty($params) && !is_array($params)) {
+            $params = [$params];
+        }
+        array_unshift($params, $this->level);
+        $count = $this->event->run($eventName, $params);
+        if ($count >= $limitCount) {
+            throw new LotteryException("当前奖品送出已达上限", Status::DATE_PRIZES_LIMIT);
+        }
+        return $this;
+    }
+
+    /**
+     * Whether user can get the prizes again.
+     */
+    public function userCanPrize($userCanPrize = [], $beginDate = '', $repeat = 1, $eventName = '', $params = [])
+    {
+        !empty($eventName) or $eventName = 'user_limit';
+        $this->eventThrow($eventName);
+        ($this->level != -1) or $this->lottery();
+        !empty($userCanPrize) or $userCanPrize = LotteryConfig::$UserCanPrize;
+        !empty($beginDate) or $beginDate = (LotteryConfig::$ActivityDate)[0];
+        !empty($repeat) or $repeat = (LotteryConfig::$RepeatData)[$this->level - 1];
+        $this->paramsThrow((empty($userCanPrize) || empty($beginDate) || ($repeat <= 0)), 'userCanPrize()');
+        $limit = $userCanPrize[$this->level - 1];
+        $cycle = $this->getCycle($beginDate, $repeat);
+        $count = $this->event->run($eventName, [$this->level, $cycle]);
+        if ($count >= $limit)
+            throw new LotteryException("当前用户的抽奖限制还没刷新", Status::USER_CAN_NOT_PRIZE_NOW);
+        return $this;
+    }
+
+    /**
+     * Make sure user can get a prize.If all prize out,then user get nothing.
+     */
+    public function definiteGetPrize($order = 'desc', $size = 0, $eventName = '', $params = [])
+    {
+        !empty($order) or $order = LotteryConfig::$DefiniteGetPrize;
+        !empty($size) or $size = LotteryConfig::$PrizeNumber;
+        $this->paramsThrow((($order != 'desc' && $order != 'asc') || $size <= 0), 'definiteGetPrize');
+        !empty($eventName) or $eventName = 'definite_prize';
+        $this->eventThrow($eventName);
+        $prizes = [];
+        for ($i = 1; $i <= $size; $i++) {
+            $prizes[] = $i;
+        }
+        if ($order == 'desc') {
+            $prizes = array_reverse($prizes);
+        }
+        $funcResult = false;
+        foreach ($prizes as $prize) {
+            $temp = $params;
+            array_unshift($temp, $prize);
+            $result = $this->event->run($eventName, $temp);
+            if ($result) {
+                $this->level = $i;
+                $funcResult = true;
+                break;
+            }
+        }
+        if (!$funcResult) {
+            throw new LotteryException('奖品已经全部送出', Status::PRIZE_ALL_OUT);
         }
         return $this;
     }
@@ -228,179 +302,33 @@ class LuckyDraw
     }
 
     /**
-     * Get the prize's number which has been drawed.
-     */
-    public function prizeCount($prizeCount = [])
-    {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $prizes = $this->config['prize_count'];
-            $prizes = empty($prizeCount) ? (empty($prizes) ? [] : $prizes) : $prizeCount;
-            if (empty($prizes)) {
-                $this->status = self::PARAMS_NULL;
-            } else {
-                if ($this->level == -1) {
-                    $this->lottery();
-                }
-                if ($this->eventInstance->exist('prize_count_event')) {
-                    $levelCount = $this->eventInstance->run('prize_count_event', [$this->level]);
-                    if (is_int($levelCount) && $levelCount >= 0) {
-                        $levelIndex = $this->level - 1;
-                        if ($prizes[$levelIndex] <= $levelCount)
-                            $this->status = self::THIS_PRIZE_OUT;
-                    } else
-                        $this->status = self::EVENT_RETURN_ERROR;
-                } else
-                    $this->status = self::EVENT_NOT_EXIST;
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * Whether the prize's limit of today has been reached.
-     */
-    public function dateGetPrizesLimit($prizeLimit = [])
-    {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $prizeDateLimit = $this->config['prize_date_limit'];
-            $prizeDateLimit = empty($prizeLimit) ? (empty($prizeDateLimit) ? [] : $prizeDateLimit) : $prizeLimit;
-            if (empty($prizeDateLimit))
-                $this->status = self::PARAMS_NULL;
-            else {
-                if ($this->level == -1) {
-                    $this->lottery();
-                }
-                $limitCount = -1;
-                $requireTime = $_SERVER['REQUEST_TIME'];
-                $dateString = date('Y-m-d', $requireTime);
-                $levelIndex = $this->level - 1;
-                if ($prizeDateLimit['type'] == 1) {
-                    $limitCount = $prizeDateLimit['data'][$dateString][$levelIndex];
-                } else {
-                    $data = $prizeDateLimit['data'];
-                    foreach ($data as $key => $values) {
-                        $region = explode('|', $key);
-                        if (sizeof($region) < 2)
-                            continue;
-                        $begin = strtotime($region[0]);
-                        $end = strtotime($region[1]);
-                        if ($begin === false || $end === false)
-                            continue;
-                        $thisDay = date('Y-m-d', $begin);
-                        if ($thisDay != $dateString)
-                            continue;
-                        elseif ($requireTime > $begin && $requireTime < $end) {
-                            $limitCount = $data[$levelIndex];
-                            break;
-                        } else
-                            continue;
-                    }
-                }
-                if ($limitCount === -1)
-                    $this->status = self::DATE_PRIZES_LIMIT;
-                if ($this->eventInstance->exist('date_get_prizes_limit_event')) {
-                    $count = $this->eventInstance->run('date_get_prizes_limit_event', [$this->level]);
-                    if (is_int($count) && $count >= 0) {
-                        if ($count >= $limitCount)
-                            $this->status = self::DATE_PRIZES_LIMIT;
-                    } else
-                        $this->status = self::EVENT_RETURN_ERROR;
-                } else
-                    $this->status = self::EVENT_NOT_EXIST;
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * Whether user can get the prizes again.
-     */
-    public function userCanPrize($userCanPrize = [], $beginDate = '', $repeatDate = '')
-    {
-        if ($this->status == -1 && $this->level != $this->config['shared_prize']) {
-            $userPrize = $this->config['user_can_prize'];
-            $userPrize = empty($userCanPrize) ? (empty($userPrize) ? [] : $userPrize) : $userCanPrize;
-            $begin = $this->config['activity_date'][0];
-            $begin = empty($beginDate) ? (empty($begin) ? '' : $begin) : $beginDate;
-            $repeat = $this->config['repeat_data'][$this->level - 1];
-            $repeat = empty($repeatDate) ? (empty($repeat) ? '' : $repeat) : $repeatDate;
-            if (empty($userPrize) || empty($begin) || empty($repeat))
-                $this->status = self::PARAMS_NULL;
-            else {
-                if ($this->eventInstance->exist('user_can_prize_event')) {
-                    if ($this->level == -1) {
-                        $this->lottery();
-                    }
-                    $count = 0;
-                    $limit = $userPrize[$this->level - 1];
-                    $cycle = $this->getCycle($begin, $repeat);
-                    $count = $this->eventInstance->run('user_can_prize_event', [$this->level, $cycle]);
-                    if (is_int($count) && $count >= 0) {
-                        if ($count >= $limit)
-                            $this->status = self::USER_CAN_NOT_PRIZE_NOW;
-                    } else
-                        $this->status = self::EVENT_RETURN_ERROR;
-                } else
-                    $this->status = self::EVENT_NOT_EXIST;
-            }
-        }
-        return $this;
-    }
-
-    /**
      * Make cycle with $beginDate and $repeatData.
      */
-    private function getCycle($beginDate, $repeatData)
+    private function getCycle($beginDate, $repeat)
     {
         $beginStamp = strtotime($beginDate);
         $second = time() - $beginStamp;
-        $cycle = (int)((int)($second / 3600) / $repeatData) + 1;
+        $cycle = (int)((int)($second / 3600) / $repeat) + 1;
         return $cycle;
     }
 
     /**
-     * Make sure user can get a prize.If all prize out,then user get nothing.
+     * Check event exist,if not exist then throw a exception.
      */
-    public function definiteGetPrize($order = 'desc')
+    public function eventThrow($eventName)
     {
-        if ($this->status == -1) {
-            if (isset($this->config['definite_get_prize']) &&
-                isset($this->config['prize_number']) &&
-                $this->eventInstance->exist('definite_get_prize_event')
-            ) {
-                $config = $this->config['definite_get_prize'];
-                if (isset($config['order']) && ($config['order'] == 'desc' || $config['order'] == 'asc'))
-                    $order = $config['order'];
-                $size = $this->config['prize_number'];
-                $funcResult = false;
-                if ($order == 'asc') {
-                    for ($i = 1; $i <= $size; $i++) {
-                        $result = $this->eventInstance->run('definite_get_prize_event', [$i]);
-                        if ($result) {
-                            $this->level = $i;
-                            $this->status = -1;
-                            $funcResult = true;
-                            break;
-                        }
-                    }
-                } elseif ($order == 'desc') {
-                    for ($i = $size; $i >= 1; $i--) {
-                        $result = $this->eventInstance->run('definite_get_prize_event', [$i]);
-                        if ($result) {
-                            $this->level = $i;
-                            $this->status = -1;
-                            $funcResult = true;
-                            break;
-                        }
-                    }
-                }
-                if (!$funcResult) {
-                    $this->status = self::PRIZE_ALL_OUT;
-                }
-            } else {
-                $this->status = self::PARAMS_NULL;
-            }
+        if (!$this->event->exist('$eventName')) {
+            throw new LotteryException("{$eventName}事件缺失", Status::EVENT_NOT_EXIST);
         }
-        return $this;
+    }
+
+    /**
+     * Check method's params whether is lawful.If not then throw a excetpion.
+     */
+    public function paramsThrow($bool, $methodName)
+    {
+        if ($bool) {
+            throw new LotteryException("{$methodName}事件缺失", Status::PARAMS_ERROR);
+        }
     }
 }
