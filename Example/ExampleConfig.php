@@ -23,6 +23,7 @@ class ExampleConfig
         '2017-06-14' => [1, 2, 3, 4],
         '2017-06-15' => [1, 2, 3, 4]
     ];
+
     public static $prizeDateLimitEvent = NULL;
 
     public static $activityBeginDate = '2017-06-15 00:00:01';

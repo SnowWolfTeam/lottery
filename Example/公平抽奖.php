@@ -1,5 +1,6 @@
 <?php
 require "ExampleConfig.php";
+
 use LuckyDraw\Example\ExampleConfig;
 use LuckyDraw\LuckyDraw;
 use LuckyDraw\Code\FairLottery;
@@ -8,7 +9,8 @@ use think\Db;
 $luckDraw = new LuckyDraw(
     new FairLottery(),
     ExampleConfig::$prizesCount,
-    ExampleConfig::$probability);
+    ExampleConfig::$probability
+);
 
 //1 . 活动日期
 $luckDraw->activityDate(ExampleConfig::$activityDate);

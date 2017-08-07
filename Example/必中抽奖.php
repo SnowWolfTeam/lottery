@@ -21,11 +21,13 @@ var_dump($luckDraw->prizeId);
 //3 . 活动日期+抽奖时间段+每人中奖数
 $luckDraw->activityDate(ExampleConfig::$activityDate)
     ->timeRegionLimit(ExampleConfig::$timeRegion)
-    ->prizePersonalLimit(ExampleConfig::$everyGetPrizes,
+    ->prizePersonalLimit(
+        ExampleConfig::$everyGetPrizes,
         function ($name) {
             $count = Db::table('prize')->where(['name' => $name])->count();
             return $count;
-        }, ['thr']
+        },
+        ['thr']
     );
 var_dump($luckDraw->prizeId);
 

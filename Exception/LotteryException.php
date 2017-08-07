@@ -1,5 +1,6 @@
 <?php
 namespace LuckyDraw\Exception;
+
 class LotteryException extends \Exception
 {
     public function __construct($message, $code)

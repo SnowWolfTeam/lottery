@@ -42,6 +42,7 @@ class LuckyDraw implements InputInterface
         if (!is_array($timesRegion)) {
             throw new LotteryException('datePrizesLimit()参数错误', Status::PARAMS_ERROR);
         }
+
         $this->lotteryInstance->timeRegionLimit($timesRegion);
         return $this;
     }
@@ -69,12 +70,17 @@ class LuckyDraw implements InputInterface
 
     public function userCanPrize($canPrizesArray, $beginDate, $repeatTimesArray, $event, $params = [])
     {
-        if (!is_array($canPrizesArray) || empty($canPrizesArray)
-            || empty($beginDate) || !is_array($repeatTimesArray)
-            || empty($repeatTimesArray) || !($event instanceof \Closure)
+        if (
+            !is_array($canPrizesArray)
+            || empty($canPrizesArray)
+            || empty($beginDate)
+            || !is_array($repeatTimesArray)
+            || empty($repeatTimesArray)
+            || !($event instanceof \Closure)
         ) {
             throw new LotteryException('datePrizesLimit()参数错误', Status::PARAMS_ERROR);
         }
+
         $this->config->userCanPrize = $canPrizesArray;
         $this->config->activityBeginDate = $beginDate;
         $this->config->repeatData = $repeatTimesArray;
@@ -88,6 +94,7 @@ class LuckyDraw implements InputInterface
         if (!($event instanceof \Closure)) {
             throw new LotteryException('datePrizesLimit()参数错误', Status::PARAMS_ERROR);
         }
+
         $this->config->prizesCountEvent = [$event, $params];
         $this->invokeMethods['prizesRemaining'] = true;
         return $this;
