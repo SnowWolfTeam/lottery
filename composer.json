@@ -6,16 +6,18 @@
   "license" : "MIT",
   "autoload":{
     "psr-4":{
-      "LuckyDraw\\":"./"
+      "LuckyDraw\\":"./src"
     }
   },
-  "authors": [{
-    "name":         "RuiHua Tang",
-    "email":        "547740900@qq.com",
-    "homepage":     "https://github.com/",
-    "role":         "Programmer"
-  }],
+  "authors": [
+    {
+      "name":         "RuiHua Tang",
+      "email":        "547740900@qq.com",
+      "homepage":     "https://github.com/",
+      "role":         "Programmer"
+    }
+  ],
   "require":{
-        "php": ">=5.3.0"
-   }
+    "php": ">=5.3.0"
+  }
 }
