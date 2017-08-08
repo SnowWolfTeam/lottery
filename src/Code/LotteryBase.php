@@ -80,9 +80,9 @@ class LotteryBase
      * Whether the user's toatl numbers of prize reach the maximum limit.
      * (用户个人中奖数限制)
      */
-    public function prizePersonalLimit($limit, $event, $params = [])
+    public function prizePersonalLimit($limit, \Closure $event, $params = [])
     {
-        if (!is_int($limit) || $limit < 0 || !($event instanceof \Closure)) {
+        if (!is_int($limit) || $limit < 0) {
             throw new LotteryException('prizePersonalLimit()参数错误', Status::PARAMS_ERROR);
         }
 
@@ -203,7 +203,7 @@ class LotteryBase
         }
 
         if (strpos((string) $probability, ".")) {
-            list($head, $tail) = explode('.', (string) $probability);
+            list($head, $tail) = explode('.', (string) $probability, 2);
             $totalNumber = 100 * pow(10, strlen($tail));
             $prizeNumber = (int) ($head . $tail);
         } else {

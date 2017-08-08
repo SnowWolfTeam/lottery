@@ -40,6 +40,7 @@ class LuckyDraw implements InputInterface
         $this->config = new LotteryConfig();
         $this->config->prizesCount = $prizesCount;
         $this->config->probability = $probability;
+
         if ($countEvent[0] instanceof \Closure) {
             $this->config->prizesCountEvent = $countEvent;
         }

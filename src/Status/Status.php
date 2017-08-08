@@ -1,5 +1,6 @@
 <?php
 namespace LuckyDraw\Status;
+
 class Status
 {
     const PARAMS_ERROR = 100;
